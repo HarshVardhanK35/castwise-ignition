@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { init } from "../index.js";
+import { init, updateConfig } from "../index.js";
 
 describe("init", () => {
   test("with no api, data equals fallbackData", async () => {
@@ -29,5 +29,54 @@ describe("init", () => {
     app.trigger("play");
 
     expect(cb).toHaveBeenCalled();
+  });
+});
+
+describe("updateConfig", () => {
+  test("with no api, resolves to appName/config/data: fallbackData", async () => {
+    const result = await updateConfig({
+      appName: "test-app",
+      fallbackData: { foo: "bar" },
+    });
+
+    expect(result).toEqual({
+      appName: "test-app",
+      config: { appName: "test-app", fallbackData: { foo: "bar" } },
+      data: { foo: "bar" },
+    });
+  });
+
+  test("with api set and fetch succeeding, returns fresh data", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ temp: 72 }),
+    });
+
+    const result = await updateConfig({
+      appName: "weather-widget",
+      api: {
+        url: "http://example.com",
+        cacheKey: "update-key1",
+        maxAgeMs: 10000,
+      },
+    });
+
+    expect(result.data).toEqual({ temp: 72 });
+  });
+
+  test("with api set and fetch throwing, falls back to fallbackData", async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error("network error"));
+
+    const result = await updateConfig({
+      appName: "weather-widget",
+      api: {
+        url: "http://example.com",
+        cacheKey: "update-key2",
+        maxAgeMs: 10000,
+        fallbackData: { temp: 0 },
+      },
+    });
+
+    expect(result.data).toEqual({ temp: 0 });
   });
 });

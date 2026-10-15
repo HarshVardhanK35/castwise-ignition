@@ -1,0 +1,16 @@
+{
+  "name": "@castwise/ignition",
+  "version": "1.0.1",
+  "description": "A tiny, framework-agnostic runtime for building digital signage apps.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^30.5.2"
+  }
+}

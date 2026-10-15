@@ -1,6 +1,6 @@
 {
   "name": "@castwise/ignition",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A tiny, framework-agnostic runtime for building digital signage apps.",
   "main": "src/index.js",
   "type": "module",

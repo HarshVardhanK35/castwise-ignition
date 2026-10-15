@@ -24,3 +24,11 @@ export async function init(appConfig = {}) {
     logger,
   };
 }
+
+export async function updateConfig(newAppConfig = {}) {
+  const data = newAppConfig.api
+    ? await fetchData(newAppConfig.api.url, newAppConfig.api)
+    : (newAppConfig.fallbackData ?? null);
+
+  return buildConfig(newAppConfig, data);
+}

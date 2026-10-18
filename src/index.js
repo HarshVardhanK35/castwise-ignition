@@ -3,6 +3,8 @@ import { createLifecycle } from "./lifecycle.js";
 import { fetchData } from "./fetchData.js";
 import { buildConfig } from "./config.js";
 
+export { awaitHostConfig } from "./hostConfig.js";
+
 export async function init(appConfig = {}) {
   const logger = createLogger(appConfig.logging);
   const lifecycle = createLifecycle();

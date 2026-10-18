@@ -1,22 +1,28 @@
 import { getCached, setCached } from "./cache.js";
 
+const noopLogger = { log() {}, warn() {}, error() {} };
+
 export async function fetchData(url, options = {}) {
-  const { cacheKey, maxAgeMs, fallbackData } = options;
+  const { cacheKey, maxAgeMs, fallbackData, logger = noopLogger } = options;
 
   const cached = getCached(cacheKey, maxAgeMs);
   if (cached !== null) {
+    logger.log(`cache hit for "${cacheKey}" — skipping network fetch`);
     return cached;
   }
 
+  logger.log(`fetching ${url}`);
   try {
     const res = await fetch(url);
-    if (!res.ok) throw new Error("Bad response");
-    
+    if (!res.ok) throw new Error(`Bad response: ${res.status}`);
+
     const data = await res.json();
 
     setCached(cacheKey, data);
+    logger.log(`fetch succeeded, cached under "${cacheKey}"`);
     return data;
-  } catch {
+  } catch (err) {
+    logger.warn(`fetch failed, using fallbackData —`, err);
     return fallbackData;
   }
 }
@@ -27,10 +33,15 @@ export async function fetchData(url, options = {}) {
  *
  * fetchData(url, options)
  *   url     — the endpoint to fetch JSON from.
- *   options — { cacheKey, maxAgeMs, fallbackData }:
+ *   options — { cacheKey, maxAgeMs, fallbackData, logger }:
  *     cacheKey     — the key used to read/write this data in the cache.
  *     maxAgeMs     — how old a cached value may be before it's stale.
  *     fallbackData — what to return if fetching fails for any reason.
+ *     logger       — optional (defaults to a silent no-op); when given,
+ *                    reports cache hits, outgoing fetches, successes, and
+ *                    failures (with the real error) so an app's console
+ *                    actually shows what Ignition is doing instead of
+ *                    everything happening invisibly.
  *
  *   Behavior:
  *     1. Checks the cache first via getCached(cacheKey, maxAgeMs). If

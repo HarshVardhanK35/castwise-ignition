@@ -24,7 +24,7 @@ rendering.
 ## Core concept
 
 ```js
-import { init } from "ignition";
+import { init, updateConfig } from "@castwise/ignition";
 
 const app = await init({
   appName: "weather-widget",
@@ -38,10 +38,44 @@ app.onPause(() => { /* stop/freeze */ });
 app.onMute(() => { /* ... */ });
 app.onUnmute(() => { /* ... */ });
 app.onTimeout(() => { /* this app's time slot ended */ });
+
+// Later — a config change arrived (e.g. the host's settings screen), or a
+// periodic refresh is due. Same shape as init(), minus the lifecycle hooks
+// (the app already has those from init()).
+const updated = await updateConfig({
+  appName: "weather-widget",
+  config: { /* the new settings */ },
+});
 ```
 
 Ignition never renders anything itself — it only resolves configuration,
 data, and lifecycle state. Rendering is entirely up to the app.
+
+## Receiving config from the host
+
+An app embedded inside a host player (an iframe) doesn't get its config
+handed to it directly — it has to ask for it over `postMessage`, since the
+host and the app usually run on different origins. `watchHostConfig`
+handles that handshake:
+
+```js
+import { watchHostConfig } from "@castwise/ignition";
+
+const unwatch = watchHostConfig((config) => {
+  // Called with the host's config — once on initial load, and again on
+  // every later change (e.g. someone editing this app's settings live).
+  // Opened directly outside any host (not embedded)? Never called at all —
+  // the app should fall back to its own default/demo config in that case.
+});
+
+// Call this when the app is torn down, to stop listening.
+unwatch();
+```
+
+Internally this sends `{ type: "APP_READY" }` to the parent window once,
+then listens indefinitely for `{ type: "DFM_CONFIG", config }` messages —
+it does **not** resolve once and stop, since a host can push an updated
+config at any point after the initial handshake, not just at startup.
 
 ## Terms
 
@@ -66,8 +100,18 @@ data, and lifecycle state. Rendering is entirely up to the app.
 ## Install
 
 ```
-npm install ignition
+npm install @castwise/ignition
 ```
+
+## Version
+
+```js
+import { VERSION } from "@castwise/ignition";
+```
+
+Kept in sync with `package.json` on every publish — apps use this to
+report which Ignition build they're actually running against, e.g. in a
+startup diagnostic log.
 
 ## Testing
 
@@ -87,6 +131,7 @@ One test file per source file, co-located under `src/__tests__/`:
 | `lifecycle.test.js` | Registered callbacks fire on the matching `trigger()` event, don't fire on a different event, and multiple callbacks on the same event all run. |
 | `cache.test.js` | A fresh cached value round-trips correctly, a never-set key returns `null`, and an expired (older than `maxAgeMs`) value is treated as a miss. |
 | `fetchData.test.js` | A successful fetch returns and caches its data; a valid cache hit skips the network call entirely; a thrown error or a non-`ok` response both fall back to `fallbackData` instead of throwing. |
+| `hostConfig.test.js` | Not embedded: `onConfig` is never called. Embedded: posts `APP_READY`, calls `onConfig` on every `DFM_CONFIG` message (not just the first), ignores other message types, and the returned unsubscribe actually removes the listener. |
 | `config.test.js` | `buildConfig` assembles `appName`/`config`/`data` correctly from its inputs. |
 | `index.test.js` | `init()` end-to-end: resolves to `fallbackData` with no `api` configured, returns working lifecycle methods, and `trigger()` actually fires a registered callback. |
 

@@ -77,6 +77,19 @@ then listens indefinitely for `{ type: "DFM_CONFIG", config }` messages —
 it does **not** resolve once and stop, since a host can push an updated
 config at any point after the initial handshake, not just at startup.
 
+## Data and offline
+
+`init()` and `updateConfig()` fetch an app's data from the `api` block of its
+config, `{ url, cacheKey, maxAgeMs, fallbackData, timeoutMs }`:
+
+1. A saved copy younger than `maxAgeMs` is used straight away, with no network call.
+2. Otherwise the URL is fetched (given up on after `timeoutMs`, 10 seconds by default) and the result is saved.
+3. If the fetch fails (no internet, timeout, bad response), the last saved copy is used **however old it is**; `fallbackData` only if nothing was ever saved.
+
+So a screen that has lost its internet keeps showing the last weather or news
+it had. Images, videos and the app bundle itself are not Ignition's job: the
+player page saves those (see the CastWise README, "Offline screens").
+
 ## Terms
 
 - **App** — a self-contained signage widget built on top of Ignition.
@@ -94,8 +107,9 @@ config at any point after the initial handshake, not just at startup.
 - **One environment.** Built for the browser. No native-bridge detection,
   no dual-transport abstraction — if it ever needs to run somewhere else,
   that's a separate adapter, not baked into the core.
-- **Fail soft.** A failed API call falls back to cached or static data
-  instead of leaving the app with nothing to show.
+- **Fail soft.** A failed API call falls back to the last saved data (however
+  old), then to static fallback data, instead of leaving the app with
+  nothing to show. A fetch that never answers is given up on after a timeout.
 
 ## Install
 
@@ -129,8 +143,8 @@ One test file per source file, co-located under `src/__tests__/`:
 |---|---|
 | `logger.test.js` | `log`/`warn`/`error` fire the right `console` method, and stay silent when `enabled: false`. |
 | `lifecycle.test.js` | Registered callbacks fire on the matching `trigger()` event, don't fire on a different event, and multiple callbacks on the same event all run. |
-| `cache.test.js` | A fresh cached value round-trips correctly, a never-set key returns `null`, and an expired (older than `maxAgeMs`) value is treated as a miss. |
-| `fetchData.test.js` | A successful fetch returns and caches its data; a valid cache hit skips the network call entirely; a thrown error or a non-`ok` response both fall back to `fallbackData` instead of throwing. |
+| `cache.test.js` | A fresh cached value round-trips correctly, a never-set key returns `null`, an expired (older than `maxAgeMs`) value is treated as a miss, and `getStale` still returns that expired value. |
+| `fetchData.test.js` | A successful fetch returns and caches its data; a valid cache hit skips the network call entirely; a thrown error or a non-`ok` response falls back to `fallbackData` instead of throwing; when a saved copy exists (even an expired one) it is returned instead of `fallbackData`; a fetch that never answers is given up on after `timeoutMs`. |
 | `hostConfig.test.js` | Not embedded: `onConfig` is never called. Embedded: posts `APP_READY`, calls `onConfig` on every `DFM_CONFIG` message (not just the first), ignores other message types, and the returned unsubscribe actually removes the listener. |
 | `config.test.js` | `buildConfig` assembles `appName`/`config`/`data` correctly from its inputs. |
 | `index.test.js` | `init()` end-to-end: resolves to `fallbackData` with no `api` configured, returns working lifecycle methods, and `trigger()` actually fires a registered callback. |

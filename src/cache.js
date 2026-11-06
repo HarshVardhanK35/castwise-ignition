@@ -12,6 +12,20 @@ export function getCached(key, maxAgeMs) {
   }
 }
 
+// The saved data whatever its age (null if there is none), for when a fetch
+// fails and an old copy is better than nothing.
+export function getStale(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+
+    const { data } = JSON.parse(raw);
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function setCached(key, data) {
   try {
     localStorage.setItem(key, JSON.stringify({ data, cachedAt: Date.now() }));
@@ -39,6 +53,12 @@ export function setCached(key, data) {
  *       returns null (does not delete it, just ignores it).
  *     Otherwise returns the originally saved data as-is.
  *   Any read/parse failure also returns null, same as "nothing cached."
+ *
+ * getStale(key)
+ *   Reads what was saved under that key regardless of its age. Returns the
+ *   data, or null if nothing is saved or it can't be read. Used by fetchData.js
+ *   when a fetch fails, so a screen with no internet shows the last data it
+ *   had instead of nothing.
  *
  * Callers (e.g. fetchData.js) are expected to treat a null return from
  * getCached as a cache miss and fetch fresh data instead.

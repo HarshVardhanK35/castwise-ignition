@@ -74,4 +74,38 @@ describe("fetchData", () => {
 
     expect(result).toEqual({ fallback: true });
   });
+
+  test("when fetch fails, an expired saved copy is returned instead of fallbackData", async () => {
+    localStorage.setItem(
+      "key5",
+      JSON.stringify({ data: { saved: true }, cachedAt: Date.now() - 60000 }),
+    );
+    global.fetch = jest.fn().mockRejectedValue(new Error("offline"));
+
+    const result = await fetchData("http://example.com", {
+      cacheKey: "key5",
+      maxAgeMs: 10000,
+      fallbackData: { fallback: true },
+    });
+
+    expect(result).toEqual({ saved: true });
+  });
+
+  test("a fetch that never answers is given up on after timeoutMs", async () => {
+    global.fetch = jest.fn(
+      (url, { signal }) =>
+        new Promise((resolve, reject) => {
+          signal.addEventListener("abort", () => reject(new Error("aborted")));
+        }),
+    );
+
+    const result = await fetchData("http://example.com", {
+      cacheKey: "key6",
+      maxAgeMs: 10000,
+      fallbackData: { fallback: true },
+      timeoutMs: 20,
+    });
+
+    expect(result).toEqual({ fallback: true });
+  });
 });

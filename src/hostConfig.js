@@ -1,7 +1,5 @@
-// watchHostConfig: the "receive config from host" transport step — same
-// role as a real signage engine's getInitialMessage(), scoped down to
-// browser-only postMessage (Ignition only ever targets a browser, never a
-// native bridge, so there's no second transport to support here).
+// watchHostConfig: the "receive config from host" step, over browser-only
+// postMessage (Ignition only ever targets a browser).
 
 // Not embedded (opened directly, e.g. a browser tab during local dev) ->
 // onConfig is never called at all; the caller keeps using its own demo/

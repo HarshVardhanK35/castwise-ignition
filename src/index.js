@@ -9,7 +9,7 @@ export { watchHostConfig } from "./hostConfig.js";
 // read this to report which Ignition build they're actually running
 // against (e.g. a "bootstrap:mounted" diagnostic log), same as the real
 // engine's own version tag.
-export const VERSION = "1.3.0";
+export const VERSION = "1.4.0";
 
 export async function init(appConfig = {}) {
   const logger = createLogger(appConfig.logging);

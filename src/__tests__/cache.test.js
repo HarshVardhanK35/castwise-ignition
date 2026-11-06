@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { getCached, setCached } from "../cache.js";
+import { getCached, getStale, setCached } from "../cache.js";
 
 beforeAll(() => {
   let store = {};
@@ -40,6 +40,24 @@ describe("cache", () => {
     expect(getCached("test-key", 10000)).toBeNull();
 
     Date.now.mockRestore();
+  });
+
+  test("getStale returns an expired value that getCached would ignore", () => {
+    const now = Date.now();
+    jest.spyOn(Date, "now").mockReturnValue(now);
+
+    setCached("test-key", { hello: "world" });
+
+    Date.now.mockReturnValue(now + 20000);
+
+    expect(getCached("test-key", 10000)).toBeNull();
+    expect(getStale("test-key")).toEqual({ hello: "world" });
+
+    Date.now.mockRestore();
+  });
+
+  test("getStale on a key that was never set returns null", () => {
+    expect(getStale("never-set")).toBeNull();
   });
 });
 
